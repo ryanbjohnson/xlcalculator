@@ -3,6 +3,8 @@ import inspect
 import typing
 
 from . import func_xltypes, xlerrors
+from app.xlDataRequestGenerator import dr as drx
+
 
 COMPATIBILITY = 'EXCEL'
 CELL_CHARACTER_LIMIT = 32767
@@ -97,6 +99,8 @@ def validate_args(func):
         # 2. Run the function to compute the result.
         try:
             res = func(*bound.args, **bound.kwargs)
+        except drx.DataRequestException as dr:
+            raise drx.DataRequestException(dr.model, dr.message)
         except xlerrors.ExcelError as err:
             # Never crash on Excel errors as we want to store them as the cell
             # value.

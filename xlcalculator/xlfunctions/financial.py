@@ -1,13 +1,58 @@
 
 from typing import Tuple
-
+import numpy as npf, inspect
 import pandas as pd
-import numpy_financial as npf
 from scipy.optimize import newton
+from app.DataRequest import DataRequestModel as dr
+
 
 from . import xl, xlerrors, func_xltypes
 
+def check_stack_for_context():
+    for frame_info in inspect.stack():
+        if frame_info.function == 'evaluate':
+            evaluator = frame_info.frame.f_locals.get('self', None)
+                # Accessing the context variable if it exists.
+            context = frame_info.frame.f_locals.get('context', None)
+            if context and hasattr(context, 'parent_context'):
+                parent_context = getattr(context, 'parent_context')
+                print(f"'context.parent_context' found: {parent_context}")
+                return parent_context
+    return None
 
+@xl.register()
+@xl.validate_args
+def NLL(FunctionName: func_xltypes.XlText, Table: func_xltypes.XlText, Field: func_xltypes.XlText = '', *Filters: Tuple[func_xltypes.XlAnything]
+) ->  func_xltypes.XlAnything:
+    """Returns a string that encodes the arguments passed to the function."""
+    if not isinstance(Field, str):
+        Field = Field.value
+    if not isinstance(Table, str):
+        Table = Table.value
+    if not isinstance(FunctionName, str):
+        FunctionName = FunctionName.value
+            
+    FilterValues = []
+    for Filter in Filters:
+        FilterValues.append(Filter.value)
+    data_request = dr.GetCreateByParameters(FunctionName=FunctionName, Table=Table, Field=Field, Filters=FilterValues)
+    return data_request
+    return "*^" + data_request.query_id
+    
+@xl.register()
+@xl.validate_args
+def NFF(Key: func_xltypes.XlText, Field: func_xltypes.XlText, *Filters: Tuple[func_xltypes.XlAnything]
+) ->  func_xltypes.XlAnything:
+    """Returns a string that encodes the arguments passed to the function."""
+    if Key.value.startswith("*^"):
+        KeyVal = Key.value[2:]
+        data_request : dr = dr.GetByQueryID(KeyVal)
+        data_request.AddField(Field.value)
+        #raise dr(data_request, "Data Request NFF")
+        return "^*" + KeyVal + "|" + Field.value
+        
+        
+    
 @xl.register()
 @xl.validate_args
 def IRR(

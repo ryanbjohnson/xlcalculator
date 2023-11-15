@@ -2,15 +2,16 @@ import sys
 from functools import lru_cache
 
 from xlcalculator.xlfunctions import xl, func_xltypes
-
+from app.xlDataRequestGenerator import dr
 from . import ast_nodes, xltypes
 
 
 class EvaluatorContext(ast_nodes.EvalContext):
 
-    def __init__(self, evaluator, ref):
+    def __init__(self, evaluator, ref, parent_context=None):
         super().__init__(evaluator.namespace, ref)
         self.evaluator = evaluator
+        self.parent_context = parent_context
 
     @property
     def cells(self):
@@ -28,18 +29,20 @@ class EvaluatorContext(ast_nodes.EvalContext):
                 f'Cycle detected for {addr}:\n- ' + '\n- '.join(self.seen))
         self.seen.append(addr)
 
-        return self.evaluator.evaluate(addr, None)
+        return self.evaluator.evaluate(addr, None, parent_context=self)
 
 
 class Evaluator:
     """Traverses and evaluates a given model."""
 
-    def __init__(self, model, namespace=None):
+    def __init__(self, model, graber, namespace=None):
+        self.graber = graber
+        
         self.model = model
         self.namespace = namespace \
             if namespace is not None else xl.FUNCTIONS.copy()
         self.cache_count = 0
-
+        
     def _get_context(self, ref):
         return EvaluatorContext(self, ref)
 
@@ -66,7 +69,7 @@ class Evaluator:
                 f"formula and they aren't supported as a cell "
                 f"reference.")
 
-    def evaluate(self, addr, context=None):
+    def evaluate(self, addr, context=None, parent_context=None):
         # 1. Resolve the address to a cell.
         addr = self.resolve_names(addr)
         if addr not in self.model.cells:
@@ -83,8 +86,11 @@ class Evaluator:
         #    (Note: Range nodes will automatically evaluate all their
         #           dependencies.)
         context = context if context is not None else self._get_context(addr)
+        context.parent_context = parent_context
         try:
             value = cell.formula.ast.eval(context)
+        except dr.DataRequestException as e:
+            raise dr.DataRequestException(e.model, e.message)
         except Exception as err:
             raise RuntimeError(
                 f"Problem evaluating cell {addr} formula "

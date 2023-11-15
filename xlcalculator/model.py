@@ -190,7 +190,10 @@ class ModelCompiler:
         return self.model
 
     def read_and_parse_dict(
-            self, input_dict, default_sheet="Sheet1", build_code=True):
+            self, input_dict, defined_names = None, default_sheet="Sheet1", build_code=True):
+        if defined_names:
+            self.defined_names = defined_names
+            
         for item in input_dict:
             if "!" in item:
                 cell_address = item
@@ -214,7 +217,11 @@ class ModelCompiler:
             else:
                 self.model.cells[cell_address] = xltypes.XLCell(
                     cell_address, input_dict[item])
-
+                
+        if defined_names:
+            self.build_defined_names()
+            self.link_cells_to_defined_names()
+            
         self.build_ranges(default_sheet=default_sheet)
 
         if build_code:

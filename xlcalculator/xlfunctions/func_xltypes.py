@@ -3,6 +3,7 @@ import dateutil
 import numpy
 import pandas
 from typing import Optional, Union, NewType
+from app.DataRequest import DataRequestModel
 
 from . import utils, xlerrors
 
@@ -49,6 +50,8 @@ class ExcelType:
         if isinstance(value, xlerrors.ExcelError):
             return value
         if isinstance(value, tuple(NATIVE_TO_XLTYPE.values())):
+            return value
+        if isinstance(value, DataRequestModel):
             return value
         return NATIVE_TO_XLTYPE[type(value)](value)
 
