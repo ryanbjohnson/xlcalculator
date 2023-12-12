@@ -1,4 +1,5 @@
 import inspect
+from app.data_collector import BaseDataCollector
 
 from xlcalculator.xlfunctions import (
     xl,
@@ -253,8 +254,20 @@ class FunctionNode(ASTNode):
                     pitem.eval(context) for pitem in pvalue
                 ])
             else:
+                # Calculation inside a cell
+                curr_cell = BaseDataCollector.current_cell
+                if (func_name == 'NFF') and (pname == 'key'):
+                    BaseDataCollector.current_cell = None
+                
                 args.append(pvalue.eval(context))
-        # 4. Run function and return result.
+                                
+                BaseDataCollector.current_cell = curr_cell
+                
+        # 4. Run function and return result
+        if func_name not in ['NLL', 'NFF']:
+            for arg in args:
+                if hasattr(arg, 'signature'):
+                    return arg
         return func(*args)
 
     def __str__(self):

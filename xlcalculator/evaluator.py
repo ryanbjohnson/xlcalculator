@@ -2,7 +2,6 @@ import sys
 from functools import lru_cache
 
 from xlcalculator.xlfunctions import xl, func_xltypes
-from app.xlDataRequestGenerator import dr
 from . import ast_nodes, xltypes
 
 
@@ -89,8 +88,6 @@ class Evaluator:
         context.parent_context = parent_context
         try:
             value = cell.formula.ast.eval(context)
-        except dr.DataRequestException as e:
-            raise dr.DataRequestException(e.model, e.message)
         except Exception as err:
             raise RuntimeError(
                 f"Problem evaluating cell {addr} formula "

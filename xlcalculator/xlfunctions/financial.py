@@ -3,55 +3,67 @@ from typing import Tuple
 import numpy as npf, inspect
 import pandas as pd
 from scipy.optimize import newton
-from app.DataRequest import DataRequestModel as dr
+from app.data_collector import RecordCollector, FieldCollector, BaseDataCollector
 
 
 from . import xl, xlerrors, func_xltypes
 
-def check_stack_for_context():
-    for frame_info in inspect.stack():
-        if frame_info.function == 'evaluate':
-            evaluator = frame_info.frame.f_locals.get('self', None)
-                # Accessing the context variable if it exists.
-            context = frame_info.frame.f_locals.get('context', None)
-            if context and hasattr(context, 'parent_context'):
-                parent_context = getattr(context, 'parent_context')
-                print(f"'context.parent_context' found: {parent_context}")
-                return parent_context
-    return None
+       
 
 @xl.register()
 @xl.validate_args
-def NLL(FunctionName: func_xltypes.XlText, Table: func_xltypes.XlText, Field: func_xltypes.XlText = '', *Filters: Tuple[func_xltypes.XlAnything]
+def NLL(function: func_xltypes.XlText, table_name: func_xltypes.XlText, field_name: func_xltypes.XlText = '', *filters: Tuple[func_xltypes.XlAnything]
 ) ->  func_xltypes.XlAnything:
-    """Returns a string that encodes the arguments passed to the function."""
-    if not isinstance(Field, str):
-        Field = Field.value
-    if not isinstance(Table, str):
-        Table = Table.value
-    if not isinstance(FunctionName, str):
-        FunctionName = FunctionName.value
-            
-    FilterValues = []
-    for Filter in Filters:
-        FilterValues.append(Filter.value)
-    data_request = dr.GetCreateByParameters(FunctionName=FunctionName, Table=Table, Field=Field, Filters=FilterValues)
-    return data_request
-    return "*^" + data_request.query_id
+    
+    tc = RecordCollector(function, table_name, field_name, *filters)
+    
+    if tc.current_record:
+        # Got the data!  yeah!
+        return func_xltypes.Text(tc.id, tc)
+    
+    if BaseDataCollector.current_cell:
+        tc.xlCells.append(BaseDataCollector.current_cell)
+    
+    return tc
+   
     
 @xl.register()
 @xl.validate_args
-def NFF(Key: func_xltypes.XlText, Field: func_xltypes.XlText, *Filters: Tuple[func_xltypes.XlAnything]
+def NFF(key: func_xltypes.XlText, field_name: func_xltypes.XlText, *filters: Tuple[func_xltypes.XlAnything]
 ) ->  func_xltypes.XlAnything:
     """Returns a string that encodes the arguments passed to the function."""
-    if Key.value.startswith("*^"):
-        KeyVal = Key.value[2:]
-        data_request : dr = dr.GetByQueryID(KeyVal)
-        data_request.AddField(Field.value)
-        #raise dr(data_request, "Data Request NFF")
-        return "^*" + KeyVal + "|" + Field.value
+    
+    row_expander: RecordCollector   
         
+    if isinstance(key, RecordCollector):
+        fc = FieldCollector(key, field_name, *filters)
         
+        if BaseDataCollector.current_cell:
+            fc.xlCells.append(BaseDataCollector.current_cell)
+        return fc    
+    elif isinstance(key, func_xltypes.Text):
+        row_expander = key.collector
+        if not row_expander.current_record:
+            raise Exception(key, "NFF key must be an NLL Function")
+        
+        meta = row_expander.metadata[field_name]
+        field_index = meta['Index']
+        data_type = meta['Type']
+        value = row_expander.current_record[field_index]
+        
+        if data_type in ['Text', 'Code', 'Option']:
+            return func_xltypes.Text(value)
+        elif data_type in ['BigInteger', 'Integer', 'Decimal', 'Float']:
+            return func_xltypes.Number(value)
+        elif data_type in ['DateTime', 'Date', 'Time']:
+            return func_xltypes.DateTime(value)
+        elif data_type == 'Boolean':
+            return func_xltypes.Boolean(value)
+        
+    else:
+        raise Exception(key, "NFF key must be an NLL Function")
+    
+    
     
 @xl.register()
 @xl.validate_args

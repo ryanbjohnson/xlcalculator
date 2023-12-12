@@ -3,7 +3,7 @@ import inspect
 import typing
 
 from . import func_xltypes, xlerrors
-from app.xlDataRequestGenerator import dr as drx
+ 
 
 
 COMPATIBILITY = 'EXCEL'
@@ -46,8 +46,12 @@ def register(name=None):
 
     return registerFunction
 
+import app.data_collector as drx
 
 def _validate(vtype, val, name):
+    if isinstance(val, drx.BaseDataCollector):
+        return val
+    
     cast = TYPE_TO_CAST.get(vtype, None)
     if cast is not None:
         return cast(val)
@@ -99,8 +103,7 @@ def validate_args(func):
         # 2. Run the function to compute the result.
         try:
             res = func(*bound.args, **bound.kwargs)
-        except drx.DataRequestException as dr:
-            raise drx.DataRequestException(dr.model, dr.message)
+        
         except xlerrors.ExcelError as err:
             # Never crash on Excel errors as we want to store them as the cell
             # value.

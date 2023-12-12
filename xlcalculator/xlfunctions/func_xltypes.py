@@ -3,7 +3,7 @@ import dateutil
 import numpy
 import pandas
 from typing import Optional, Union, NewType
-from app.DataRequest import DataRequestModel
+from app.data_collector import BaseDataCollector
 
 from . import utils, xlerrors
 
@@ -16,18 +16,21 @@ def register(cls):
     return cls
 
 
+
 class ExcelType:
 
-    __slots__ = ('value')
+    __slots__ = ('value', 'collector')
 
     native_types = ()
 
     sort_precedence = 0
 
-    def __new__(cls, value):
+    def __new__(cls, value, collector=None):
         inst = super().__new__(cls)
         assert isinstance(value, cls.native_types), value
         inst.value = value
+        inst.collector = collector
+        
         return inst
 
     @classmethod
@@ -51,7 +54,7 @@ class ExcelType:
             return value
         if isinstance(value, tuple(NATIVE_TO_XLTYPE.values())):
             return value
-        if isinstance(value, DataRequestModel):
+        if isinstance(value, BaseDataCollector):
             return value
         return NATIVE_TO_XLTYPE[type(value)](value)
 

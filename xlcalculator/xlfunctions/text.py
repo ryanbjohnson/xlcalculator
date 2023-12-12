@@ -1,6 +1,7 @@
 from typing import Tuple
-
+import datetime
 from . import xl, xlerrors, func_xltypes
+import excel_text as xt
 
 
 @xl.register()
@@ -136,6 +137,31 @@ def LOWER(
         lower-function-3f21df02-a80c-44b2-afaf-81358f9fdeb4
     """
     return str(text).lower()
+
+@xl.register()
+@xl.validate_args
+def TEXT(
+        value: func_xltypes.XlAnything,
+        format_string: func_xltypes.Text) -> func_xltypes.XlText:
+    
+    if hasattr(value, 'value'):
+        value = value.value
+    if hasattr(format_string, 'value'):
+        format_string = format_string.value
+        
+    return xt.text(value, format_string)
+        
+    format_string = format_string.replace("#", "")
+    format_string = format_string.replace(",", ",")
+    
+    if isinstance(value, (int, float)):
+        # Handling numeric values
+        return format(value, format_string)
+    elif isinstance(value, datetime.datetime):
+        # Handling datetime values
+        return value.strftime(format_string)
+    else:
+        raise TypeError("Unsupported type for formatting")
 
 
 @xl.register()
