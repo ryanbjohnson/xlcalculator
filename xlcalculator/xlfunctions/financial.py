@@ -4,6 +4,8 @@ import numpy as npf, inspect
 import pandas as pd
 from scipy.optimize import newton
 from app.data_collector import RecordCollector, FieldCollector, BaseDataCollector
+from datetime import datetime, date, time
+
 
 
 from . import xl, xlerrors, func_xltypes
@@ -47,15 +49,22 @@ def NFF(key: func_xltypes.XlText, field_name: func_xltypes.XlText, *filters: Tup
             raise Exception(key, "NFF key must be an NLL Function")
         
         meta = row_expander.metadata[field_name]
-        field_index = meta['Index']
-        data_type = meta['Type']
+        field_index = meta['index']
+        data_type = meta['type']
         value = row_expander.current_record[field_index]
         
         if data_type in ['Text', 'Code', 'Option']:
             return func_xltypes.Text(value)
         elif data_type in ['BigInteger', 'Integer', 'Decimal', 'Float']:
             return func_xltypes.Number(value)
-        elif data_type in ['DateTime', 'Date', 'Time']:
+        elif data_type in ['DateTime']:
+            value = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+            return func_xltypes.DateTime(value)
+        elif data_type in ['Date']:
+            value = datetime.strptime(value, '%Y-%m-%d')
+            return func_xltypes.DateTime(value)
+        elif data_type in ['Time']:
+            value = datetime.strptime(value, '%H:%M:%S')
             return func_xltypes.DateTime(value)
         elif data_type == 'Boolean':
             return func_xltypes.Boolean(value)
