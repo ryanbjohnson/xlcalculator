@@ -2,7 +2,6 @@ import openpyxl
 
 from . import patch, xltypes
 
-
 class Reader():
 
     def __init__(self, file_name):
