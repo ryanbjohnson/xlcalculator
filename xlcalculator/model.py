@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 
 from . import xltypes, reader, parser, tokenizer
 
-
 @dataclass
 class Model():
 

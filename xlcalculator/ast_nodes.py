@@ -127,6 +127,14 @@ class OperandNode(ASTNode):
             return '"' + self.tvalue.replace('"', '\\"') + '"'
         return str(self.tvalue)
 
+    #SSRJ
+    def regenerate_formula(self):
+        if self.tsubtype == "text":
+            return f'"{self.tvalue}"'  # Add quotes around text values
+        elif self.tsubtype == "logical":
+            return self.tvalue.upper()  # Convert boolean to uppercase (TRUE/FALSE)
+        return str(self.tvalue)    
+    
 
 class RangeNode(OperandNode):
     """Represents a spreadsheet cell, range, named_range."""
@@ -176,7 +184,10 @@ class RangeNode(OperandNode):
         value = context.eval_cell(addr)
         context.set_sheet()
         return value
-
+    
+    # SSRJ
+    def regenerate_formula(self):
+        return self.address
 
 class OperatorNode(ASTNode):
 
@@ -215,6 +226,17 @@ class OperatorNode(ASTNode):
         yield self.right
         yield self
 
+    # SSRJ
+    def regenerate_formula(self):
+        if self.ttype == 'operator-prefix':
+            return f"{self.tvalue}{self.right.regenerate_formula()}"
+        elif self.ttype == 'operator-infix':
+            left = self.left.regenerate_formula() if self.left else ''
+            right = self.right.regenerate_formula() if self.right else ''
+            return f"({left} {self.tvalue} {right})"
+        elif self.ttype == 'operator-postfix':
+            return f"{self.left.regenerate_formula()}{self.tvalue}"
+    
 
 class FunctionNode(ASTNode):
     """AST node representing a function call"""
@@ -279,3 +301,9 @@ class FunctionNode(ASTNode):
         for arg in self.args:
             yield arg
         yield self
+
+    def regenerate_formula(self):
+        args_str = ", ".join(arg.regenerate_formula() for arg in self.args)
+        return f"{self.tvalue}({args_str})"        
+
+        

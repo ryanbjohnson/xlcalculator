@@ -331,7 +331,20 @@ class FormulaParser:
             stack.append(node)
 
         return stack.pop()
-    
+
     def regenerate_formula(self, ast):
         """Regenerate formula from AST"""
-        return ast.regenerate_formula()
+        # Check if the input AST node is valid
+        if ast is None:
+            raise ValueError("AST node is None")
+
+        # Start the formula regeneration process
+        return self._regenerate_formula_recursively(ast)
+
+    def _regenerate_formula_recursively(self, node):
+        """Recursively regenerate the formula from the AST node."""
+        if node is None:
+            return ""
+
+        # Regenerate formula based on the node type
+        return node.regenerate_formula()

@@ -59,6 +59,10 @@ class XLCell(XLType):
         compare=False, default=None, hash=False, repr=True)
     # These are "back-links" to the defined names in Model.
     defined_names: list = field(compare=False, default_factory=list, repr=True)
+    
+    # SSRJ
+    formula_tokens: list = field(compare=False, default_factory=list, repr=True)
+
 
     def __post_init__(self):
         self.sheet, self.column, self.row = utils.resolve_address(self.address)
