@@ -689,3 +689,39 @@ class ExcelParser(ExcelParserTokens):
     def parse(self, formula):
         self.tokens = self.getTokens(formula)
         return self.tokens
+
+
+def increment_cell_reference(cell_ref, row_inc, col_inc):
+    # Increment column and row references in the cell reference
+    col_ref = re.match(r'\$?[A-Z]+', cell_ref)
+    row_ref = re.match(r'\$?\d+', cell_ref)
+
+    if col_ref:
+        col_ref = col_ref.group()
+        if not col_ref.startswith('$'):
+            col_num = col2num(col_ref)
+            col_ref = num2col(col_num + col_inc)
+
+    if row_ref:
+        row_ref = row_ref.group()
+        if not row_ref.startswith('$'):
+            row_ref = str(int(row_ref) + row_inc)
+
+    return col_ref + row_ref
+
+def increment_formula(formula, row_inc, col_inc):
+    parser = ExcelParser()
+    tokens = parser.parse(formula)
+
+    incremented_tokens = []
+    for token in tokens.items:
+        if token.ttype == parser.TOK_TYPE_OPERAND and token.tsubtype == parser.TOK_SUBTYPE_RANGE:
+            # Increment cell references within the range
+            cell_refs = token.tvalue.split(':')
+            incremented_refs = [increment_cell_reference(ref, row_inc, col_inc) for ref in cell_refs]
+            incremented_token = ':'.join(incremented_refs)
+            incremented_tokens.append(incremented_token)
+        else:
+            incremented_tokens.append(token.tvalue)
+
+    return ''.join(incremented_tokens)

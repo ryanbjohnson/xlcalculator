@@ -331,3 +331,7 @@ class FormulaParser:
             stack.append(node)
 
         return stack.pop()
+    
+    def regenerate_formula(self, ast):
+        """Regenerate formula from AST"""
+        return ast.regenerate_formula()
